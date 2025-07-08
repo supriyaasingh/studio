@@ -80,17 +80,20 @@ export function DosageCalculator() {
     },
   });
 
-  const { watch, getValues } = form;
-  const watchedFields = watch();
+  const { watch } = form;
+  const weight = watch("weight");
+  const age = watch("age");
+  const formType = watch("formType");
+  const strengthMg = watch("strengthMg");
+  const strengthMl = watch("strengthMl");
 
   useEffect(() => {
     if (!drugInfo) return;
 
-    const values = getValues();
-    const weightKg = parseFloat(values.weight || '0') || (values.age ? estimateWeight(parseFloat(values.age)) : 0);
-    const strengthMg = parseFloat(values.strengthMg);
+    const weightKg = parseFloat(weight || "0") || (age ? estimateWeight(parseFloat(age)) : 0);
+    const numStrengthMg = parseFloat(strengthMg);
 
-    if (!weightKg || !strengthMg || !drugInfo.dosePerKg) {
+    if (!weightKg || !numStrengthMg || !drugInfo.dosePerKg) {
       setCalculation(null);
       return;
     }
@@ -100,23 +103,30 @@ export function DosageCalculator() {
 
     if (drugInfo.maxDailyDosePerKg) {
       newCalculation.maxDailyDose = Calcs.calculateMaxDailyDose(weightKg, drugInfo.maxDailyDosePerKg);
-      if (newCalculation.doseMg > newCalculation.maxDailyDose / (24 / parseInt(drugInfo.frequency?.match(/\d+/)![0] || '24'))) {
-          newCalculation.warning = `Single dose exceeds recommended limits. Max daily dose: ${newCalculation.maxDailyDose.toFixed(2)}mg.`;
+      if (drugInfo.frequency) {
+        const freqMatch = drugInfo.frequency.match(/\d+/);
+        const hours = freqMatch ? parseInt(freqMatch[0], 10) : 0;
+        if (hours > 0) {
+          const dosesPerDay = 24 / hours;
+          if (newCalculation.doseMg > newCalculation.maxDailyDose / dosesPerDay) {
+            newCalculation.warning = `Single dose exceeds recommended limits. Max daily dose: ${newCalculation.maxDailyDose.toFixed(2)}mg.`;
+          }
+        }
       }
     }
 
-    if (values.formType === "syrup") {
-      const strengthMl = parseFloat(values.strengthMl || '0');
-      if (strengthMl > 0) {
-        newCalculation.doseMl = Calcs.calculateVolumeMl(newCalculation.doseMg, strengthMg, strengthMl);
+    if (formType === "syrup") {
+      const numStrengthMl = parseFloat(strengthMl || '0');
+      if (numStrengthMl > 0) {
+        newCalculation.doseMl = Calcs.calculateVolumeMl(newCalculation.doseMg, numStrengthMg, numStrengthMl);
       }
     } else {
-      newCalculation.doseTablets = Calcs.calculateTablets(newCalculation.doseMg, strengthMg);
+      newCalculation.doseTablets = Calcs.calculateTablets(newCalculation.doseMg, numStrengthMg);
     }
 
     setCalculation(newCalculation);
 
-  }, [watchedFields, drugInfo, getValues]);
+  }, [weight, age, formType, strengthMg, strengthMl, drugInfo]);
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
@@ -274,7 +284,7 @@ export function DosageCalculator() {
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                             className="flex space-x-4"
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">
@@ -309,7 +319,7 @@ export function DosageCalculator() {
                         </FormItem>
                       )}
                     />
-                    {watchedFields.formType === "syrup" && (
+                    {formType === "syrup" && (
                       <FormField
                         control={form.control}
                         name="strengthMl"
@@ -332,7 +342,7 @@ export function DosageCalculator() {
             {calculation && (
               <Alert variant="default" className="bg-primary/5 border-primary/20">
                 <div className="flex items-center mb-2">
-                    {watchedFields.formType === 'syrup' ? 
+                    {formType === 'syrup' ? 
                         <Syringe className="h-6 w-6 text-primary" /> : 
                         <Pill className="h-6 w-6 text-primary" />}
                     <AlertTitle className="ml-2 text-xl font-bold text-primary">Calculated Dose</AlertTitle>

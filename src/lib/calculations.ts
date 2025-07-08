@@ -57,3 +57,29 @@ export function calculateTabletsFromWeight(weightKg: number, dosePerKg: number, 
 export function calculateMaxDailyDose(weightKg: number, maxDailyDosePerKg: number): number {
   return weightKg * maxDailyDosePerKg;
 }
+
+/**
+ * Parses the frequency string to determine the number of doses per day.
+ * @param frequency - The administration frequency string (e.g., "Every 12 hours").
+ * @returns The number of doses per day.
+ */
+export function getDosesPerDay(frequency?: string): number {
+  if (!frequency) return 1;
+  const freq = frequency.toLowerCase();
+
+  if (freq.includes("once a day") || freq.includes("every 24 hours")) return 1;
+  if (freq.includes("twice a day") || freq.includes("every 12 hours")) return 2;
+  if (freq.includes("three times a day") || freq.includes("every 8 hours")) return 3;
+  if (freq.includes("four times a day") || freq.includes("every 6 hours")) return 4;
+  
+  const match = freq.match(/(\d+)/);
+  if (match) {
+    const hours = parseInt(match[0], 10);
+    if (hours > 0 && 24 % hours === 0) {
+      return 24 / hours;
+    }
+  }
+
+  // Default to 1 if frequency is unparsable (e.g., "as needed")
+  return 1;
+}

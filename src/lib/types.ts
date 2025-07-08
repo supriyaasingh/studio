@@ -6,9 +6,11 @@ import type { OfflineDosageCalculationOutput } from "@/ai/flows/offline-dosage-c
 export type DrugInfo = (DrugSearchOutput | Omit<OfflineDosageCalculationOutput, 'genericName'> & { name: string });
 
 export type CalculationResult = {
-  doseMg: number;
+  doseMg: number; // Single dose in mg
   doseMl?: number;
   doseTablets?: number;
-  maxDailyDose: number;
+  totalDailyDose: number;
+  maxDailyDose?: number;
   warning?: string;
+  dosesPerDay: number;
 };

@@ -103,30 +103,31 @@ export function DosageCalculator() {
       return;
     }
 
-    const newCalculation: CalculationResult = { doseMg: 0, maxDailyDose: 0 };
-    newCalculation.doseMg = Calcs.calculateDoseMg(weightKg, dosePerKg);
+    const dosesPerDay = Calcs.getDosesPerDay(frequency);
+    const totalDailyDoseMg = Calcs.calculateDoseMg(weightKg, dosePerKg);
+    const singleDoseMg = totalDailyDoseMg / dosesPerDay;
+
+    const newCalculation: CalculationResult = {
+      doseMg: singleDoseMg,
+      totalDailyDose: totalDailyDoseMg,
+      dosesPerDay: dosesPerDay,
+    };
 
     if (maxDailyDosePerKg) {
-      newCalculation.maxDailyDose = Calcs.calculateMaxDailyDose(weightKg, maxDailyDosePerKg);
-      if (frequency) {
-        const freqMatch = frequency.match(/\d+/);
-        const hours = freqMatch ? parseInt(freqMatch[0], 10) : 0;
-        if (hours > 0) {
-          const dosesPerDay = 24 / hours;
-          if (newCalculation.doseMg > newCalculation.maxDailyDose / dosesPerDay) {
-            newCalculation.warning = `Single dose exceeds recommended limits. Max daily dose: ${newCalculation.maxDailyDose.toFixed(2)}mg.`;
-          }
-        }
+      const maxDailyDoseMg = Calcs.calculateMaxDailyDose(weightKg, maxDailyDosePerKg);
+      newCalculation.maxDailyDose = maxDailyDoseMg;
+      if (totalDailyDoseMg > maxDailyDoseMg) {
+        newCalculation.warning = `Total daily dose (${totalDailyDoseMg.toFixed(2)}mg) exceeds the maximum recommended daily dose (${maxDailyDoseMg.toFixed(2)}mg).`;
       }
     }
 
     if (watchedValues.formType === "syrup") {
       const numStrengthMl = parseFloat(watchedValues.strengthMl || '0');
       if (numStrengthMl > 0) {
-        newCalculation.doseMl = Calcs.calculateVolumeMl(newCalculation.doseMg, numStrengthMg, numStrengthMl);
+        newCalculation.doseMl = Calcs.calculateVolumeMl(singleDoseMg, numStrengthMg, numStrengthMl);
       }
     } else {
-      newCalculation.doseTablets = Calcs.calculateTabletsFromWeight(weightKg, dosePerKg, numStrengthMg);
+      newCalculation.doseTablets = Calcs.calculateTablets(singleDoseMg, numStrengthMg);
     }
 
     setCalculation(newCalculation);
@@ -301,7 +302,7 @@ export function DosageCalculator() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-sm text-muted-foreground">
-                    {drugInfo.dosePerKg && <p><strong>Standard Dose:</strong> {drugInfo.dosePerKg} mg/kg</p>}
+                    {drugInfo.dosePerKg && <p><strong>Standard Daily Dose:</strong> {drugInfo.dosePerKg} mg/kg/day</p>}
                     {drugInfo.frequency && <p><strong>Frequency:</strong> {drugInfo.frequency}</p>}
                   </div>
                   <FormField
@@ -375,22 +376,29 @@ export function DosageCalculator() {
                 <AlertDescription className="text-lg text-foreground/90 space-y-2">
                   {calculation.doseMl != null && (
                     <p className="font-semibold">
-                      <span className="text-3xl font-bold text-accent">{calculation.doseMl.toFixed(1)}</span> mL
+                      <span className="text-3xl font-bold text-accent">{calculation.doseMl.toFixed(1)}</span> mL per dose
                     </p>
                   )}
                   {calculation.doseTablets != null && (
                     <p className="font-semibold">
-                      <span className="text-3xl font-bold text-accent">{formatTablets(calculation.doseTablets)}</span> tablets
+                      <span className="text-3xl font-bold text-accent">{formatTablets(calculation.doseTablets)}</span>{' '}
+                      {calculation.doseTablets > 1 ? 'tablets' : 'tablet'} per dose
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    ({calculation.doseMg.toFixed(2)} mg)
+                    ({calculation.doseMg.toFixed(2)} mg/dose)
                   </p>
-                  {calculation.maxDailyDose > 0 && 
-                    <p className="text-sm text-muted-foreground">Max Daily Dose: {calculation.maxDailyDose.toFixed(2)} mg</p>
-                  }
+                  
+                  <div className="pt-2 text-sm text-muted-foreground border-t border-border mt-2 space-y-1">
+                    {frequency && <p><strong>Frequency:</strong> {frequency}</p>}
+                    <p><strong>Total Daily Dose:</strong> {calculation.totalDailyDose.toFixed(2)} mg</p>
+                    {calculation.maxDailyDose && 
+                      <p><strong>Max Daily Dose:</strong> {calculation.maxDailyDose.toFixed(2)} mg</p>
+                    }
+                  </div>
+                  
                   {calculation.warning && (
-                     <p className="text-sm font-medium text-destructive">{calculation.warning}</p>
+                     <p className="text-sm font-medium text-destructive pt-2">{calculation.warning}</p>
                   )}
                 </AlertDescription>
               </Alert>

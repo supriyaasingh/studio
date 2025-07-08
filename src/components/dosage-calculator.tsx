@@ -85,6 +85,8 @@ export function DosageCalculator() {
   const formType = watch("formType");
   const strengthMg = watch("strengthMg");
   const strengthMl = watch("strengthMl");
+  const weight = watch('weight');
+  const age = watch('age');
 
   const { dosePerKg, maxDailyDosePerKg, frequency } = drugInfo || {};
 
@@ -127,7 +129,7 @@ export function DosageCalculator() {
 
     setCalculation(newCalculation);
 
-  }, [strengthMg, strengthMl, formType, dosePerKg, maxDailyDosePerKg, frequency, getValues, drugInfo]);
+  }, [strengthMg, strengthMl, formType, dosePerKg, maxDailyDosePerKg, frequency, getValues, drugInfo, weight, age]);
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
@@ -230,8 +232,8 @@ export function DosageCalculator() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold tracking-tight">AI Pediatric Dose Finder</CardTitle>
-        <CardDescription>AI-powered drug dosage calculator for children.</CardDescription>
+        <CardTitle className="text-2xl font-bold tracking-tight">Pediatric Dose Finder</CardTitle>
+        <CardDescription>Drug dosage calculator for children.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

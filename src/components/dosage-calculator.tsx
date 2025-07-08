@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -87,24 +87,28 @@ export function DosageCalculator() {
   const strengthMg = watch("strengthMg");
   const strengthMl = watch("strengthMl");
 
+  const watchedValues = useMemo(() => {
+    return { weight, age, formType, strengthMg, strengthMl };
+  }, [weight, age, formType, strengthMg, strengthMl]);
+
+  const { dosePerKg, maxDailyDosePerKg, frequency } = drugInfo || {};
+
   useEffect(() => {
-    if (!drugInfo) return;
+    const weightKg = parseFloat(watchedValues.weight || "0") || (watchedValues.age ? estimateWeight(parseFloat(watchedValues.age)) : 0);
+    const numStrengthMg = parseFloat(watchedValues.strengthMg);
 
-    const weightKg = parseFloat(weight || "0") || (age ? estimateWeight(parseFloat(age)) : 0);
-    const numStrengthMg = parseFloat(strengthMg);
-
-    if (!weightKg || !numStrengthMg || !drugInfo.dosePerKg) {
+    if (!weightKg || !numStrengthMg || !dosePerKg) {
       setCalculation(null);
       return;
     }
 
     const newCalculation: CalculationResult = { doseMg: 0, maxDailyDose: 0 };
-    newCalculation.doseMg = Calcs.calculateDoseMg(weightKg, drugInfo.dosePerKg);
+    newCalculation.doseMg = Calcs.calculateDoseMg(weightKg, dosePerKg);
 
-    if (drugInfo.maxDailyDosePerKg) {
-      newCalculation.maxDailyDose = Calcs.calculateMaxDailyDose(weightKg, drugInfo.maxDailyDosePerKg);
-      if (drugInfo.frequency) {
-        const freqMatch = drugInfo.frequency.match(/\d+/);
+    if (maxDailyDosePerKg) {
+      newCalculation.maxDailyDose = Calcs.calculateMaxDailyDose(weightKg, maxDailyDosePerKg);
+      if (frequency) {
+        const freqMatch = frequency.match(/\d+/);
         const hours = freqMatch ? parseInt(freqMatch[0], 10) : 0;
         if (hours > 0) {
           const dosesPerDay = 24 / hours;
@@ -115,8 +119,8 @@ export function DosageCalculator() {
       }
     }
 
-    if (formType === "syrup") {
-      const numStrengthMl = parseFloat(strengthMl || '0');
+    if (watchedValues.formType === "syrup") {
+      const numStrengthMl = parseFloat(watchedValues.strengthMl || '0');
       if (numStrengthMl > 0) {
         newCalculation.doseMl = Calcs.calculateVolumeMl(newCalculation.doseMg, numStrengthMg, numStrengthMl);
       }
@@ -126,7 +130,7 @@ export function DosageCalculator() {
 
     setCalculation(newCalculation);
 
-  }, [weight, age, formType, strengthMg, strengthMl, drugInfo]);
+  }, [watchedValues, dosePerKg, maxDailyDosePerKg, frequency]);
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
@@ -201,6 +205,21 @@ export function DosageCalculator() {
     const Icon = category && categoryIcons[category] ? categoryIcons[category] : categoryIcons.default;
     return <Icon className="h-5 w-5 mr-2 text-primary" />;
   };
+
+  const formatTablets = (numTablets: number): string => {
+    if (numTablets == null || numTablets < 0) return '';
+    const whole = Math.floor(numTablets);
+    const fraction = numTablets - whole;
+
+    if (fraction === 0) {
+      return `${whole}`;
+    }
+    if (Math.abs(fraction - 0.5) < 0.01) {
+      return whole > 0 ? `${whole}(1/2)` : '1/2';
+    }
+    return numTablets.toFixed(2);
+  };
+
 
   return (
     <Card className="w-full">
@@ -348,14 +367,14 @@ export function DosageCalculator() {
                     <AlertTitle className="ml-2 text-xl font-bold text-primary">Calculated Dose</AlertTitle>
                 </div>
                 <AlertDescription className="text-lg text-foreground/90 space-y-2">
-                  {calculation.doseMl && (
+                  {calculation.doseMl != null && (
                     <p className="font-semibold">
                       <span className="text-3xl font-bold text-accent">{calculation.doseMl.toFixed(1)}</span> mL
                     </p>
                   )}
-                  {calculation.doseTablets && (
+                  {calculation.doseTablets != null && (
                     <p className="font-semibold">
-                      <span className="text-3xl font-bold text-accent">{calculation.doseTablets.toFixed(2)}</span> tablets
+                      <span className="text-3xl font-bold text-accent">{formatTablets(calculation.doseTablets)}</span> tablets
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground">

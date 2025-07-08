@@ -81,29 +81,24 @@ export function DosageCalculator() {
     },
   });
 
-  const { watch } = form;
-  const weight = watch("weight");
-  const age = watch("age");
+  const { watch, getValues } = form;
   const formType = watch("formType");
   const strengthMg = watch("strengthMg");
   const strengthMl = watch("strengthMl");
 
-  const watchedValues = useMemo(() => {
-    return { weight, age, formType, strengthMg, strengthMl };
-  }, [weight, age, formType, strengthMg, strengthMl]);
-
   const { dosePerKg, maxDailyDosePerKg, frequency } = drugInfo || {};
 
   useEffect(() => {
-    const weightKg = parseFloat(watchedValues.weight || "0") || (watchedValues.age ? estimateWeight(parseFloat(watchedValues.age)) : 0);
-    const numStrengthMg = parseFloat(watchedValues.strengthMg);
+    const values = getValues();
+    const weightKg = parseFloat(values.weight || "0") || (values.age ? estimateWeight(parseFloat(values.age)) : 0);
+    const numStrengthMg = parseFloat(values.strengthMg);
 
-    if (!weightKg || !numStrengthMg || !dosePerKg) {
+    if (!weightKg || !numStrengthMg || !dosePerKg || !drugInfo) {
       setCalculation(null);
       return;
     }
 
-    const dosesPerDay = Calcs.getDosesPerDay(frequency);
+    const dosesPerDay = Calcs.getDosesPerDay(drugInfo.frequency);
     const totalDailyDoseMg = Calcs.calculateDoseMg(weightKg, dosePerKg);
     const singleDoseMg = totalDailyDoseMg / dosesPerDay;
 
@@ -112,7 +107,7 @@ export function DosageCalculator() {
       totalDailyDose: totalDailyDoseMg,
       dosesPerDay: dosesPerDay,
     };
-
+    
     if (maxDailyDosePerKg) {
       const maxDailyDoseMg = Calcs.calculateMaxDailyDose(weightKg, maxDailyDosePerKg);
       newCalculation.maxDailyDose = maxDailyDoseMg;
@@ -121,18 +116,18 @@ export function DosageCalculator() {
       }
     }
 
-    if (watchedValues.formType === "syrup") {
-      const numStrengthMl = parseFloat(watchedValues.strengthMl || '0');
+    if (values.formType === "syrup") {
+      const numStrengthMl = parseFloat(values.strengthMl || '0');
       if (numStrengthMl > 0) {
         newCalculation.doseMl = Calcs.calculateVolumeMl(singleDoseMg, numStrengthMg, numStrengthMl);
       }
     } else {
-      newCalculation.doseTablets = Calcs.calculateTablets(singleDoseMg, numStrengthMg);
+        newCalculation.doseTablets = Calcs.calculateTabletsFromWeight(weightKg, dosePerKg / dosesPerDay, numStrengthMg);
     }
 
     setCalculation(newCalculation);
 
-  }, [watchedValues, dosePerKg, maxDailyDosePerKg, frequency]);
+  }, [strengthMg, strengthMl, formType, dosePerKg, maxDailyDosePerKg, frequency, getValues, drugInfo]);
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
@@ -280,7 +275,7 @@ export function DosageCalculator() {
                   name="age"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Age (years)</FormLabel>
+                      <FormLabel>Age (years) (optional)</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="e.g., 2 (used if no weight)" {...field} />
                       </FormControl>

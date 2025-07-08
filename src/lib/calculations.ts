@@ -36,6 +36,19 @@ export function calculateTablets(doseMg: number, tabletStrengthMg: number): numb
 }
 
 /**
+ * Calculates the number of tablets from weight, dose/kg and tablet strength.
+ * tablets = (weight × dosePerKg) ÷ tabletStrengthMg
+ * @param weightKg - Patient's weight in kilograms.
+ * @param dosePerKg - Standard dose per kilogram for the drug.
+ * @param tabletStrengthMg - The strength in milligrams of a single tablet.
+ * @returns The number of tablets required.
+ */
+export function calculateTabletsFromWeight(weightKg: number, dosePerKg: number, tabletStrengthMg: number): number {
+  if (tabletStrengthMg === 0) return 0;
+  return (weightKg * dosePerKg) / tabletStrengthMg;
+}
+
+/**
  * Calculates the maximum daily dose for a patient.
  * @param weightKg - Patient's weight in kilograms.
  * @param maxDailyDosePerKg - Maximum daily dose per kilogram for the drug.

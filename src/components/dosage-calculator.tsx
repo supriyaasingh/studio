@@ -27,6 +27,7 @@ import * as Calcs from "@/lib/calculations";
 import type { DrugInfo, CalculationResult } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   query: z.string().min(2, "Please enter a drug or condition."),
@@ -125,7 +126,7 @@ export function DosageCalculator() {
         newCalculation.doseMl = Calcs.calculateVolumeMl(newCalculation.doseMg, numStrengthMg, numStrengthMl);
       }
     } else {
-      newCalculation.doseTablets = Calcs.calculateTablets(newCalculation.doseMg, numStrengthMg);
+      newCalculation.doseTablets = Calcs.calculateTabletsFromWeight(weightKg, dosePerKg, numStrengthMg);
     }
 
     setCalculation(newCalculation);
@@ -211,11 +212,20 @@ export function DosageCalculator() {
     const whole = Math.floor(numTablets);
     const fraction = numTablets - whole;
 
-    if (fraction === 0) {
-      return `${whole}`;
+    if (fraction < 0.125) {
+        return `${whole}`;
     }
-    if (Math.abs(fraction - 0.5) < 0.01) {
-      return whole > 0 ? `${whole}(1/2)` : '1/2';
+    if (Math.abs(fraction - 0.25) < 0.125) {
+        return whole > 0 ? `${whole} (1/4)` : '1/4';
+    }
+    if (Math.abs(fraction - 0.5) < 0.125) {
+      return whole > 0 ? `${whole} (1/2)` : '1/2';
+    }
+    if (Math.abs(fraction - 0.75) < 0.125) {
+        return whole > 0 ? `${whole} (3/4)` : '3/4';
+    }
+    if (fraction > 0.875) {
+        return `${whole + 1}`;
     }
     return numTablets.toFixed(2);
   };
@@ -307,16 +317,12 @@ export function DosageCalculator() {
                             className="flex space-x-4"
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="syrup" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Syrup</FormLabel>
+                              <RadioGroupItem value="syrup" id="formType-syrup" />
+                              <Label htmlFor="formType-syrup" className="font-normal">Syrup</Label>
                             </FormItem>
                             <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="tablet" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Tablet</FormLabel>
+                              <RadioGroupItem value="tablet" id="formType-tablet" />
+                              <Label htmlFor="formType-tablet" className="font-normal">Tablet</Label>
                             </FormItem>
                           </RadioGroup>
                         </FormControl>

@@ -85,6 +85,8 @@ export function DosageCalculator() {
   const formType = watch("formType");
   const weight = watch('weight');
   const age = watch('age');
+  const strengthMg = watch('strengthMg');
+  const strengthMl = watch('strengthMl');
 
   const { dosePerKg, maxDailyDosePerKg, frequency } = drugInfo || {};
 

@@ -33,6 +33,7 @@ const OfflineDosageCalculationOutputSchema = z.object({
   calculatedVolumeMl: z.number().optional().describe('The calculated volume in mL, if syrup.'),
   calculatedTablets: z.number().optional().describe('The number of tablets needed.'),
   category: z.string().optional().describe('The drug category (e.g., Antibiotic, Antipyretic).'),
+  strength: z.string().optional().describe('The strength of the available preparation'),
 });
 export type OfflineDosageCalculationOutput = z.infer<typeof OfflineDosageCalculationOutputSchema>;
 
@@ -55,7 +56,7 @@ const drugDatabaseTool = ai.defineTool({
     dosePerKg: z.number().optional(),
     maxDailyDosePerKg: z.number().optional(),
     frequency: z.string().optional(),
-    forms: z.record(z.object({
+    forms: z.record(z.string(), z.object({
       strengthMg: z.number(),
       volumeMl: z.number().optional(),
     })).optional(),
@@ -64,7 +65,15 @@ const drugDatabaseTool = ai.defineTool({
   // TODO: Implement the actual database lookup here.
   // This is a placeholder. Replace with actual database interaction.
   const searchTerm = input.searchTerm.toLowerCase();
-  const mockDatabase = [
+  const mockDatabase: Array<{
+    name: string;
+    aliases?: string[];
+    category?: string;
+    dosePerKg?: number;
+    maxDailyDosePerKg?: number;
+    frequency?: string;
+    forms?: Record<string, { strengthMg: number; volumeMl?: number }>;
+  }> = [
     {
       name: 'Paracetamol',
       aliases: ['PCM', 'Dolo', 'Crocin'],
@@ -108,6 +117,8 @@ If the weight is not provided but the age is provided, use the WHO age-to-weight
 Return the generic name, recommended dose per kg, max daily dose per kg, frequency, form, strength, calculated dose in mg, calculated volume in mL, and calculated number of tablets.
 
 Make sure to include the drug category.
+
+Include the strength field in the format "XXXmg" for tablets or "XXXmg/YYYmL" for syrups.
 
 Input from doctor:
 Search Term: {{{searchTerm}}}

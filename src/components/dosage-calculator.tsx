@@ -83,8 +83,6 @@ export function DosageCalculator() {
 
   const { watch, getValues } = form;
   const formType = watch("formType");
-  const strengthMg = watch("strengthMg");
-  const strengthMl = watch("strengthMl");
   const weight = watch('weight');
   const age = watch('age');
 
@@ -92,7 +90,7 @@ export function DosageCalculator() {
 
   useEffect(() => {
     const values = getValues();
-    const weightKg = parseFloat(values.weight || "0") || (values.age ? estimateWeight(parseFloat(values.age)) : 0);
+    const weightKg = parseFloat(values.weight || "0") || (values.age ? estimateWeight(parseFloat(values.age) || 0) : 0);
     const numStrengthMg = parseFloat(values.strengthMg);
 
     if (!weightKg || !numStrengthMg || !dosePerKg || !drugInfo) {
@@ -100,7 +98,7 @@ export function DosageCalculator() {
       return;
     }
 
-    const dosesPerDay = Calcs.getDosesPerDay(drugInfo.frequency);
+    const dosesPerDay = Calcs.getDosesPerDay(drugInfo.frequency || '');
     const totalDailyDoseMg = Calcs.calculateDoseMg(weightKg, dosePerKg);
     const singleDoseMg = totalDailyDoseMg / dosesPerDay;
 
@@ -124,7 +122,7 @@ export function DosageCalculator() {
         newCalculation.doseMl = Calcs.calculateVolumeMl(singleDoseMg, numStrengthMg, numStrengthMl);
       }
     } else {
-        newCalculation.doseTablets = Calcs.calculateTabletsFromWeight(weightKg, dosePerKg / dosesPerDay, numStrengthMg);
+        newCalculation.doseTablets = Calcs.calculateTablets(singleDoseMg, numStrengthMg);
     }
 
     setCalculation(newCalculation);
@@ -168,13 +166,16 @@ export function DosageCalculator() {
           searchTerm: values.query,
           weightKg: finalWeight,
           ageYears: ageNum > 0 ? ageNum : undefined,
+          form: values.formType,
+          strengthMg: parseFloat(values.strengthMg) || undefined,
+          volumeMl: parseFloat(values.strengthMl || '0') || undefined,
         });
         toast({ title: "Offline Mode", description: "Using local data for calculations." });
       }
 
       if (result) {
         setDrugInfo(result);
-        if ('dosePerKg' in result && result.dosePerKg && result.strength) {
+        if (result.dosePerKg && result.strength) {
           const strengthParts = result.strength.match(/(\d+(\.\d+)?)\s*mg(?:\/(\d+(\.\d+)?)\s*mL)?/i);
           if (strengthParts) {
             form.setValue('strengthMg', strengthParts[1]);
@@ -206,12 +207,16 @@ export function DosageCalculator() {
   };
 
   const formatTablets = (numTablets: number): string => {
-    if (numTablets == null || numTablets < 0) return '';
+    if (numTablets == null || isNaN(numTablets) || numTablets < 0) return '';
+    
+    // Handle very small numbers
+    if (numTablets < 0.001) return '0';
+    
     const whole = Math.floor(numTablets);
     const fraction = numTablets - whole;
 
-    if (fraction < 0.125) {
-        return `${whole}`;
+    if (Math.abs(fraction) < 0.125) {
+        return whole === 0 ? '0' : `${whole}`;
     }
     if (Math.abs(fraction - 0.25) < 0.125) {
         return whole > 0 ? `${whole} (1/4)` : '1/4';
@@ -379,7 +384,7 @@ export function DosageCalculator() {
                   {calculation.doseTablets != null && (
                     <p className="font-semibold">
                       <span className="text-3xl font-bold text-accent">{formatTablets(calculation.doseTablets)}</span>{' '}
-                      {calculation.doseTablets > 1 ? 'tablets' : 'tablet'} per dose
+                      {Math.abs(calculation.doseTablets - 1) < 0.001 ? 'tablet' : 'tablets'} per dose
                     </p>
                   )}
                   <p className="text-sm text-muted-foreground">
@@ -387,7 +392,7 @@ export function DosageCalculator() {
                   </p>
                   
                   <div className="pt-2 text-sm text-muted-foreground border-t border-border mt-2 space-y-1">
-                    {frequency && <p><strong>Frequency:</strong> {frequency}</p>}
+                    {drugInfo?.frequency && <p><strong>Frequency:</strong> {drugInfo.frequency}</p>}
                     <p><strong>Total Daily Dose:</strong> {calculation.totalDailyDose.toFixed(2)} mg</p>
                     {calculation.maxDailyDose && 
                       <p><strong>Max Daily Dose:</strong> {calculation.maxDailyDose.toFixed(2)} mg</p>

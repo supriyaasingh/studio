@@ -63,7 +63,7 @@ export function calculateMaxDailyDose(weightKg: number, maxDailyDosePerKg: numbe
  * @param frequency - The administration frequency string (e.g., "Every 12 hours").
  * @returns The number of doses per day.
  */
-export function getDosesPerDay(frequency?: string): number {
+export function getDosesPerDay(frequency: string): number {
   if (!frequency) return 1;
   const freq = frequency.toLowerCase();
 
